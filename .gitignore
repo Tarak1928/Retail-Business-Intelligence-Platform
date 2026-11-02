@@ -1,0 +1,27 @@
+@"
+# Python environment
+venv/
+.venv/
+
+# Python cache and testing
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Secrets
+.env
+.env.*
+
+# Large datasets
+data/raw/
+data/processed/*.csv
+
+# Generated model files
+models/*.txt
+models/*.pkl
+models/*.joblib
+
+# Temporary files
+*.log
+.DS_Store
+"@ | Set-Content .gitignore
