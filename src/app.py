@@ -60,15 +60,38 @@ PREDICTION_FILE = (
 )
 
 TEST_FILE = (
-    PROJECT_ROOT / "data" / "processed" / "test_model_ready.csv"
+    PROJECT_ROOT / "data" / "deployment" / "test_metadata.csv"
 )
 
 HISTORICAL_FILE = (
-    PROJECT_ROOT / "data" / "processed" / "train_model_ready.csv"
+    PROJECT_ROOT / "data" / "deployment" / "historical_daily_sales.csv"
 )
 
 # ------------------------------------
-# 4. Dashboard Heading
+# 4. Verify Required Files
+# ------------------------------------
+
+required_files = [
+    PREDICTION_FILE,
+    TEST_FILE,
+    HISTORICAL_FILE
+]
+
+missing_files = [
+    file for file in required_files
+    if not file.exists()
+]
+
+if missing_files:
+    st.error("Required dashboard datasets are missing:")
+
+    for file in missing_files:
+        st.write(str(file))
+
+    st.stop()
+
+# ------------------------------------
+# 5. Dashboard Heading
 # ------------------------------------
 
 st.markdown(
@@ -84,7 +107,7 @@ st.markdown(
 st.divider()
 
 # ------------------------------------
-# 5. Load Forecast Data
+# 6. Load Forecast Data
 # ------------------------------------
 
 @st.cache_data
@@ -96,6 +119,12 @@ def load_forecast_data():
         TEST_FILE,
         usecols=["id", "date", "store_nbr", "family"]
     )
+
+    if test["id"].duplicated().any():
+        raise ValueError("Duplicate IDs found in test metadata!")
+
+    if predictions["id"].duplicated().any():
+        raise ValueError("Duplicate IDs found in forecast predictions!")
 
     data = test.merge(
         predictions,
@@ -115,7 +144,7 @@ def load_forecast_data():
 data = load_forecast_data()
 
 # ------------------------------------
-# 6. Load Historical Data
+# 7. Load Historical Data
 # ------------------------------------
 
 @st.cache_data
@@ -130,13 +159,23 @@ def load_historical_data():
         historical["date"]
     )
 
-    return historical
+    historical["sales"] = pd.to_numeric(
+        historical["sales"],
+        errors="raise"
+    )
+
+    if historical["date"].duplicated().any():
+        raise ValueError(
+            "Historical daily dataset contains duplicate dates!"
+        )
+
+    return historical.sort_values("date")
 
 
 historical = load_historical_data()
 
 # ------------------------------------
-# 7. Interactive Dashboard Filters
+# 8. Interactive Dashboard Filters
 # ------------------------------------
 
 st.sidebar.title("Dashboard Filters")
@@ -178,7 +217,7 @@ selected_families = st.sidebar.multiselect(
 )
 
 # ------------------------------------
-# 8. Apply Filters
+# 9. Apply Filters
 # ------------------------------------
 
 filtered_data = data.copy()
@@ -208,7 +247,7 @@ filtered_data = filtered_data[
 ]
 
 # ------------------------------------
-# 9. Sidebar Filter Summary
+# 10. Sidebar Filter Summary
 # ------------------------------------
 
 st.sidebar.divider()
@@ -246,7 +285,7 @@ else:
     )
 
 # ------------------------------------
-# 10. Calculate Filtered KPIs
+# 11. Calculate Filtered KPIs
 # ------------------------------------
 
 total_sales = filtered_data["sales"].sum()
@@ -265,7 +304,7 @@ average_sales = (
 )
 
 # ------------------------------------
-# 11. Dashboard Navigation
+# 12. Dashboard Navigation
 # ------------------------------------
 
 overview_tab, historical_tab, forecast_tab, product_tab, store_tab = st.tabs(
@@ -330,9 +369,7 @@ with overview_tab:
 
     st.divider()
 
-    # --------------------------------
     # Business Insights
-    # --------------------------------
 
     st.subheader("Key Business Insights")
 
@@ -351,11 +388,9 @@ with overview_tab:
         )
 
         top_family = family_totals.index[0]
-
         top_store = store_totals.index[0]
 
         top_family_sales = family_totals.iloc[0]
-
         top_store_sales = store_totals.iloc[0]
 
         insight_col1, insight_col2 = st.columns(2)
@@ -398,9 +433,7 @@ with overview_tab:
 
     st.divider()
 
-    # --------------------------------
     # Filtered Dataset Preview
-    # --------------------------------
 
     st.subheader("Filtered Forecast Dataset Preview")
 
@@ -411,15 +444,11 @@ with overview_tab:
 
     st.divider()
 
-    # --------------------------------
     # Dashboard Export and Reports
-    # --------------------------------
 
     st.header("Download Business Reports")
 
     if not filtered_data.empty:
-
-        # Forecast report
 
         forecast_export = filtered_data[
             ["id", "date", "store_nbr", "family", "sales"]
@@ -428,8 +457,6 @@ with overview_tab:
         forecast_export["date"] = (
             forecast_export["date"].dt.strftime("%Y-%m-%d")
         )
-
-        # Product family report
 
         family_export = (
             filtered_data.groupby("family")["sales"]
@@ -443,8 +470,6 @@ with overview_tab:
             family_export["sales"].sum()
         ) * 100
 
-        # Store report
-
         store_export = (
             filtered_data.groupby("store_nbr")["sales"]
             .sum()
@@ -456,8 +481,6 @@ with overview_tab:
             store_export["sales"] /
             store_export["sales"].sum()
         ) * 100
-
-        # Daily report
 
         daily_export = (
             filtered_data.groupby("date")["sales"]
@@ -510,7 +533,6 @@ with overview_tab:
             "Select valid filters before downloading reports."
         )
 
-
 # ====================================
 # TAB 2: HISTORICAL ANALYSIS
 # ====================================
@@ -521,11 +543,7 @@ with historical_tab:
 
     # Daily sales trend
 
-    daily_sales = (
-        historical.groupby("date")["sales"]
-        .sum()
-        .reset_index()
-    )
+    daily_sales = historical.copy()
 
     st.subheader("Daily Sales Trend")
 
@@ -588,7 +606,9 @@ with historical_tab:
 
     # Weekday vs weekend
 
-    st.subheader("Weekday vs Weekend Analysis")
+    st.subheader(
+        "Average Daily Total Sales: Weekday vs Weekend"
+    )
 
     historical_day = historical.copy()
 
@@ -624,7 +644,6 @@ with historical_tab:
         width="stretch"
     )
 
-
 # ====================================
 # TAB 3: FORECAST ANALYSIS
 # ====================================
@@ -635,17 +654,9 @@ with forecast_tab:
 
     if not filtered_data.empty:
 
-        # Historical daily sales
-
-        historical_daily = (
-            historical.groupby("date")["sales"]
-            .sum()
-            .reset_index()
-        )
+        historical_daily = historical.copy()
 
         historical_daily["sales_type"] = "Historical Sales"
-
-        # Filtered forecast daily sales
 
         forecast_daily = (
             filtered_data.groupby("date")["sales"]
@@ -654,8 +665,6 @@ with forecast_tab:
         )
 
         forecast_daily["sales_type"] = "Forecast Sales"
-
-        # Combine datasets
 
         comparison_data = pd.concat(
             [historical_daily, forecast_daily],
@@ -676,8 +685,6 @@ with forecast_tab:
             chart_data,
             width="stretch"
         )
-
-        # Forecast summary
 
         st.subheader("Forecast Period Summary")
 
@@ -704,12 +711,10 @@ with forecast_tab:
                 f"{forecast_daily['sales'].sum():,.2f}"
             )
 
-        # Daily forecast details
-
         st.subheader("Daily Forecast Details")
 
         st.dataframe(
-            forecast_daily.drop(columns=["sales_type"]),
+            forecast_daily,
             width="stretch"
         )
 
@@ -718,7 +723,6 @@ with forecast_tab:
         st.info(
             "Select valid filters to display forecast analysis."
         )
-
 
 # ====================================
 # TAB 4: PRODUCT PERFORMANCE
@@ -729,8 +733,6 @@ with product_tab:
     st.header("Product Family Performance Analysis")
 
     if not filtered_data.empty:
-
-        # Product family aggregation
 
         family_sales = (
             filtered_data.groupby("family")["sales"]
@@ -744,8 +746,6 @@ with product_tab:
             family_sales["sales"].sum()
         ) * 100
 
-        # Top 10 families
-
         st.subheader("Top 10 Product Families")
 
         top_10_families = family_sales.head(10)
@@ -758,8 +758,6 @@ with product_tab:
             width="stretch"
         )
 
-        # Ranking
-
         st.subheader("Product Family Sales Ranking")
 
         ranking_data = family_sales.copy()
@@ -770,8 +768,6 @@ with product_tab:
             ranking_data,
             width="stretch"
         )
-
-        # Interactive selection
 
         st.subheader("Explore Individual Product Families")
 
@@ -800,8 +796,6 @@ with product_tab:
                 "Sales Contribution",
                 f"{selected_family_data['sales_percentage']:.2f}%"
             )
-
-        # Selected family daily trend
 
         selected_family_daily = (
             filtered_data[
@@ -834,7 +828,6 @@ with product_tab:
             "No product family data is available for the selected filters."
         )
 
-
 # ====================================
 # TAB 5: STORE PERFORMANCE
 # ====================================
@@ -844,8 +837,6 @@ with store_tab:
     st.header("Store Performance Analysis")
 
     if not filtered_data.empty:
-
-        # Store aggregation
 
         store_sales = (
             filtered_data.groupby("store_nbr")["sales"]
@@ -859,8 +850,6 @@ with store_tab:
             store_sales["sales"].sum()
         ) * 100
 
-        # Top 10 stores
-
         st.subheader("Top 10 Stores by Predicted Sales")
 
         top_10_stores = store_sales.head(10)
@@ -873,16 +862,12 @@ with store_tab:
             width="stretch"
         )
 
-        # Store ranking
-
         st.subheader("Store Sales Ranking")
 
         st.dataframe(
             store_sales,
             width="stretch"
         )
-
-        # Interactive store selection
 
         st.subheader("Explore Individual Store Performance")
 
@@ -911,8 +896,6 @@ with store_tab:
                 "Sales Contribution",
                 f"{selected_store_data['sales_percentage']:.2f}%"
             )
-
-        # Daily store trend
 
         selected_store_daily = (
             filtered_data[
@@ -946,7 +929,7 @@ with store_tab:
         )
 
 # ------------------------------------
-# 12. Dashboard Completion
+# 13. Dashboard Completion
 # ------------------------------------
 
 st.sidebar.divider()

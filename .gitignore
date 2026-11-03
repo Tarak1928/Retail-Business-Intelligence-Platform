@@ -24,3 +24,8 @@ models/lightgbm_sales_model.txt
 *.log
 .DS_Store
 '@ | Set-Content .gitignore
+
+# Allow deployment datasets
+!data/
+!data/deployment/
+!data/deployment/*.csv
