@@ -1,0 +1,24 @@
+{
+    "model_name": "Final LightGBM Sales Forecasting Model",
+    "selected_experiment": "Experiment_B",
+    "model_file": "final_lightgbm_model.txt",
+    "objective": "regression",
+    "target_transformation": "log1p",
+    "prediction_inverse_transformation": "expm1",
+    "validation_start": "2017-07-31",
+    "validation_end": "2017-08-15",
+    "validation_metrics": {
+        "MAE": 78.99112754017229,
+        "RMSE": 268.7897949301947,
+        "RMSLE": 0.43356767637413224
+    },
+    "hyperparameters": {
+        "n_estimators": 600,
+        "learning_rate": 0.03,
+        "num_leaves": 63,
+        "max_depth": 10,
+        "min_child_samples": 30,
+        "reg_lambda": 2.0
+    },
+    "number_of_features": 95
+}

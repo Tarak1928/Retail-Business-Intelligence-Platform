@@ -1,4 +1,4 @@
-@"
+@'
 # Python environment
 venv/
 .venv/
@@ -16,12 +16,11 @@ __pycache__/
 data/raw/
 data/processed/*.csv
 
-# Generated model files
-models/*.txt
-models/*.pkl
-models/*.joblib
+# Experimental model files
+models/Experiment_*.txt
+models/lightgbm_sales_model.txt
 
 # Temporary files
 *.log
 .DS_Store
-"@ | Set-Content .gitignore
+'@ | Set-Content .gitignore

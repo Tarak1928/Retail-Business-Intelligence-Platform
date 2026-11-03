@@ -1,0 +1,16 @@
+{
+    "model": "Final LightGBM",
+    "training_records": 3000888,
+    "features": 95,
+    "test_records": 28512,
+    "forecast_start": "2017-08-16",
+    "forecast_end": "2017-08-31",
+    "forecast_days": 16,
+    "validation_rmsle": 0.4335676764,
+    "prediction_mean": 426.15554909445945,
+    "prediction_total": 12150547.015781227,
+    "prediction_minimum": 0.0,
+    "prediction_maximum": 12996.698995651905,
+    "test_rmsle": null,
+    "test_rmsle_note": "Actual test sales are unavailable."
+}

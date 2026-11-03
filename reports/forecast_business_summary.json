@@ -1,0 +1,12 @@
+{
+    "forecast_records": 28512,
+    "forecast_days": 16,
+    "total_predicted_sales": 12150547.02,
+    "average_predicted_sales_per_record": 426.16,
+    "top_product_family": "GROCERY I",
+    "top_product_family_sales": 3654212.39,
+    "top_store": 44,
+    "top_store_sales": 636687.09,
+    "highest_forecast_day": "2017-08-20",
+    "highest_daily_predicted_sales": 953960.63
+}
